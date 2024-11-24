@@ -1,0 +1,92 @@
+using System;
+using System.Threading.Tasks;
+using System.Web.UI;
+using FireSharp.Config;
+using FireSharp.Interfaces;
+using FireSharp.Response;
+
+namespace MiniProject1
+{
+    public partial class WebForm1 : System.Web.UI.Page
+    {
+        IFirebaseConfig ifc = new FirebaseConfig
+        {
+            AuthSecret = "QaBvwk3P8eTu8HKEbWU3bNyn85fpYO5UI2oeu6Ds",
+            BasePath = "https://men-s-grooming-and-salon-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+
+        IFirebaseClient client;
+
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            try
+            {
+                client = new FireSharp.FirebaseClient(ifc);
+                if (client == null)
+                {
+                    ClientScript.RegisterStartupScript(this.GetType(), "alert", "alert('Error: Firebase client initialization failed.');", true);
+                }
+            }
+            catch (Exception ex)
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "alert", $"alert('Error: {ex.Message}');", true);
+            }
+        }
+
+        // Event handler for booking appointment
+        protected async void BookAppointment_Click(object sender, EventArgs e)
+        {
+            // Retrieve values from form controls
+            string name = txtName.Text.Trim();
+            string phone = txtPhone.Text.Trim();
+            string address = txtAddress.Text.Trim();
+            string appointmentLocation = rblLocation.SelectedValue;
+            string appointmentDate = calendarAppointment.SelectedDate.ToString("yyyy-MM-dd");
+            string appointmentTime = ddlTiming.SelectedValue;
+            string serviceBooked = servicesddl1.SelectedValue; // Get selected service
+
+            // Validate that all required fields are filled
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(phone) || string.IsNullOrEmpty(address) ||
+                string.IsNullOrEmpty(appointmentLocation) || string.IsNullOrEmpty(appointmentDate) || string.IsNullOrEmpty(appointmentTime))
+            {
+                // Display an alert if any field is missing
+                ClientScript.RegisterStartupScript(this.GetType(), "alert", "alert('Please fill out all fields before booking an appointment.');", true);
+            }
+            else
+            {
+                var appointmentDetails = new
+                {
+                    Name = name,
+                    Phone = phone,
+                    Address = address,
+                    AppointmentLocation = appointmentLocation,
+                    AppointmentDate = appointmentDate,
+                    AppointmentTime = appointmentTime,
+                    ServiceBooked = serviceBooked // Add the service booked information
+                };
+
+                try
+                {
+                    // Store details in Firebase asynchronously
+                    SetResponse response = await client.SetAsync("Appointments/" + phone, appointmentDetails);
+
+                    // Check if data was successfully written
+                    if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        // Display a success message
+                        ClientScript.RegisterStartupScript(this.GetType(), "alert", "alert('Appointment booked successfully.');", true);
+                    }
+                    else
+                    {
+                        ClientScript.RegisterStartupScript(this.GetType(), "alert", "alert('Error: Failed to book the appointment.');", true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Display an error message if something goes wrong
+                    ClientScript.RegisterStartupScript(this.GetType(), "alert", $"alert('Error: {ex.Message}');", true);
+                }
+            }
+        }
+    }
+}
